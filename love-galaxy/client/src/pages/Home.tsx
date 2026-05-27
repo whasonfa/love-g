@@ -25,7 +25,7 @@ const BENEDETTI_QUOTES = [
 const DEFAULT_PHOTOS = [
   {
     id: 1,
-    url: "/love-galaxy-netlify/client/public/fotos/foto1.jpeg",
+    url: "client/public/fotos/foto1.jpeg",
     title: "Manos entrelazadas",
     quote: "Aprender cómo sos, quererte como sos."
   },
