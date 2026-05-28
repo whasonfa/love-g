@@ -455,7 +455,7 @@ export default function Home() {
                       Personaliza tu Galaxia de Amor
                     </h3>
                     <p className="text-sm text-white/60 mb-6">
-                      Agrega fotos tuyas y de tu novia con enlaces directos de internet (o Unsplash) y dedícale tus propios versos o más frases de Benedetti.
+                      Agrega fotos con enlaces directos de internet (o Unsplash) y agrega versos o más frases de Benedetti.
                     </p>
 
                     {/* Formulario para agregar foto */}
