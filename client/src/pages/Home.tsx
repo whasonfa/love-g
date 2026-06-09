@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, Stars, Eye, Volume2, VolumeX, Sparkles, BookOpen, MessageCircleHeart, X, Sparkle } from "lucide-react";
+import { Heart, Stars, Eye, Volume2, VolumeX, Sparkles, BookOpen, MessageCircleHeart, X, Sparkle, Settings } from "lucide-react";
 import Tunnel from "@/components/Tunnel";
 import Galaxy3D from "@/components/Galaxy3D";
 import YouTubePlayer from "@/components/YouTubePlayer";
+import { usePhotos } from "@/hooks/usePhotos";
 
 // URL de la imagen generada de los ositos abrazándose
 const BEARS_IMAGE_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663700756201/S7UdDm4XC5gXnJabKjPvPN/cute-bears-hug-LZcmMgnKVMR92hqmLNkVdJ.webp";
@@ -122,68 +123,10 @@ export default function Home() {
   // 'welcome' | 'tunnel' | 'galaxy'
   const [stage, setStage] = useState<"welcome" | "tunnel" | "galaxy">("welcome");
   
-  // Fotos de la galaxia (pueden ser personalizadas o por defecto)
-  const [photos, setPhotos] = useState(() => {
-    try {
-      const saved = localStorage.getItem("love_galaxy_photos");
-      const parsed = saved ? JSON.parse(saved) : DEFAULT_PHOTOS;
-      const normalized = normalizeSavedPhotos(parsed);
-
-      if (saved) {
-        const serialized = JSON.stringify(normalized);
-        if (serialized !== saved) {
-          localStorage.setItem("love_galaxy_photos", serialized);
-        }
-      }
-
-      return normalized;
-    } catch {
-      return DEFAULT_PHOTOS.map(normalizePhoto);
-    }
-  });
-  const [selectedPhoto, setSelectedPhoto] = useState<typeof DEFAULT_PHOTOS[0] | null>(null);
-  
-  // Estado para el panel de personalización de fotos
+  // ── Fotos desde Supabase (o localStorage como fallback) ──────────
+  const { photos, deletePhoto: handleDeletePhotoById, resetToDefaults: handleResetPhotos } = usePhotos();
+  const [selectedPhoto, setSelectedPhoto] = useState<(typeof photos)[0] | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [newPhotoUrl, setNewPhotoUrl] = useState("");
-  const [newPhotoTitle, setNewPhotoTitle] = useState("");
-  const [newPhotoQuote, setNewPhotoQuote] = useState("");
-
-  // Guardar fotos en localStorage para persistencia
-  useEffect(() => {
-    localStorage.setItem("love_galaxy_photos", JSON.stringify(photos.map(normalizePhoto)));
-  }, [photos]);
-
-  const handleAddPhoto = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPhotoUrl || !newPhotoTitle || !newPhotoQuote) return;
-
-    const newPhoto = normalizePhoto({
-      id: Date.now(),
-      url: newPhotoUrl,
-      title: newPhotoTitle,
-      quote: newPhotoQuote
-    });
-
-    setPhotos([...photos, newPhoto]);
-    setNewPhotoUrl("");
-    setNewPhotoTitle("");
-    setNewPhotoQuote("");
-  };
-
-  const handleDeletePhoto = (id: number) => {
-    if (photos.length <= 3) {
-      alert("¡Mantén al menos 3 fotos para que la galaxia se vea hermosa!");
-      return;
-    }
-    setPhotos(photos.filter((p: any) => p.id !== id));
-  };
-
-  const handleResetPhotos = () => {
-    if (window.confirm("¿Seguro que deseas restaurar las fotos románticas por defecto?")) {
-      setPhotos(DEFAULT_PHOTOS.map(normalizePhoto));
-    }
-  };
   
   // Estado para controlar el volumen del reproductor de YouTube
   const [muted, setMuted] = useState(false);
@@ -399,10 +342,10 @@ export default function Home() {
               </div>
               <div className="flex gap-2">
                 <Button 
-                  onClick={() => setShowConfig(true)}
-                  className="bg-pink-600/20 border border-pink-500/30 hover:bg-pink-600/40 text-pink-200 text-xs md:text-sm px-4 py-2 rounded-full transition-all"
+                  onClick={() => window.location.href = '/admin'}
+                  className="bg-pink-600/20 border border-pink-500/30 hover:bg-pink-600/40 text-pink-200 text-xs md:text-sm px-4 py-2 rounded-full transition-all flex items-center gap-1.5"
                 >
-                  Personalizar Fotos 📸
+                  <Settings className="w-3.5 h-3.5" /> Gestionar Fotos 📸
                 </Button>
                 <Button 
                   onClick={() => setStage("welcome")}
@@ -458,72 +401,20 @@ export default function Home() {
                       Agrega fotos con enlaces directos de internet (o Unsplash) y agrega versos o más frases de Benedetti.
                     </p>
 
-                    {/* Formulario para agregar foto */}
-                    <form onSubmit={handleAddPhoto} className="space-y-4 mb-8 bg-white/5 p-4 rounded-2xl border border-white/10">
-                      <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider">Agregar Nueva Estrella Fotográfica</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="url"
-                          placeholder="URL de la imagen (ej. de Unsplash, Pinterest, Imgur...)"
-                          value={newPhotoUrl}
-                          onChange={(e) => setNewPhotoUrl(event ? (e.target as HTMLInputElement).value : "")}
-                          className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-pink-500 focus:outline-none w-full text-white"
-                          required
-                        />
-                        <input
-                          type="text"
-                          placeholder="Título del momento (ej. Nuestro primer viaje)"
-                          value={newPhotoTitle}
-                          onChange={(e) => setNewPhotoTitle(event ? (e.target as HTMLInputElement).value : "")}
-                          className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-pink-500 focus:outline-none w-full text-white"
-                          required
-                        />
-                      </div>
-                      <textarea
-                        placeholder="Frase de amor o poema para este momento..."
-                        value={newPhotoQuote}
-                        onChange={(e) => setNewPhotoQuote(event ? (e.target as HTMLTextAreaElement).value : "")}
-                        className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-pink-500 focus:outline-none w-full h-20 text-white resize-none"
-                        required
-                      />
-                      <div className="flex justify-between items-center">
-                        <button
-                          type="button"
-                          onClick={handleResetPhotos}
-                          className="text-xs text-red-400 hover:text-red-300 underline transition-colors"
-                        >
-                          Restaurar valores por defecto
-                        </button>
-                        <Button
-                          type="submit"
-                          className="bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white font-bold rounded-xl px-6 py-2"
-                        >
-                          Agregar a la Galaxia ✨
-                        </Button>
-                      </div>
-                    </form>
-
-                    {/* Lista de fotos actuales */}
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider">Fotos en tu Galaxia ({photos.length})</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                        {photos.map((p: any) => (
-                          <div key={p.id} className="flex items-center gap-3 bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-all">
-                            <img src={p.url} alt={p.title} className="w-12 h-12 rounded-lg object-cover border border-white/10" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate text-white">{p.title}</p>
-                              <p className="text-xs text-white/50 truncate italic">"{p.quote}"</p>
-                            </div>
-                            <button
-                              onClick={() => handleDeletePhoto(p.id)}
-                              className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
-                              title="Eliminar"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                    {/* Panel simplificado — la gestión completa está en /admin */}
+                    <div className="text-center py-8 space-y-4">
+                      <p className="text-4xl">📸</p>
+                      <p className="text-white/70 text-sm leading-relaxed">
+                        Gestioná tus fotos desde el panel de administración.<br />
+                        Podés subir fotos directamente desde tu celu.
+                      </p>
+                      <p className="text-white/40 text-xs">{photos.length} foto{photos.length !== 1 ? "s" : ""} en tu galaxia</p>
+                      <Button
+                        onClick={() => window.location.href = "/admin"}
+                        className="bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white font-bold rounded-xl px-8 py-3"
+                      >
+                        Ir al panel de fotos 🌌
+                      </Button>
                     </div>
                   </motion.div>
                 </motion.div>
