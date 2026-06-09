@@ -33,11 +33,14 @@ export default function Galaxy3D({ photos, onSelectPhoto }: Galaxy3DProps) {
     const container = containerRef.current;
     const width = container.clientWidth;
     const height = container.clientHeight;
+    const growthScale = 1 + Math.min(photos.length * 0.06, 2);
+    const galaxyRadiusBase = 20;
+    const galaxyRadius = galaxyRadiusBase * growthScale;
 
     // ── Escena ────────────────────────────────────────────────
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(20, 18, 20);
+    camera.position.set(20 * growthScale, 18 * growthScale, 20 * growthScale);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -79,10 +82,11 @@ export default function Galaxy3D({ photos, onSelectPhoto }: Galaxy3DProps) {
         depthWrite: false, map: particleTex, blending: THREE.AdditiveBlending,
       }));
     };
-    scene.add(makeStarLayer(12000, 700, 0.22, 0xffffff, 0.8));
-    scene.add(makeStarLayer(4000,  600, 0.35, 0xaad4ff, 0.6));
-    scene.add(makeStarLayer(3000,  550, 0.30, 0xffb6e6, 0.5));
-    scene.add(makeStarLayer(600,   500, 0.55, 0xffffaa, 0.9));
+    const starSpread = 500 + galaxyRadius * 10;
+    scene.add(makeStarLayer(12000, starSpread + 200, 0.22, 0xffffff, 0.8));
+    scene.add(makeStarLayer(4000,  starSpread + 150, 0.35, 0xaad4ff, 0.6));
+    scene.add(makeStarLayer(3000,  starSpread + 100, 0.30, 0xffb6e6, 0.5));
+    scene.add(makeStarLayer(600,   starSpread + 50,  0.55, 0xffffaa, 0.9));
 
     // ── Nebulosas ─────────────────────────────────────────────
     type NebulaColor = { x: number; y: number; r: number; color: string; alpha: number };
@@ -144,15 +148,17 @@ export default function Galaxy3D({ photos, onSelectPhoto }: Galaxy3DProps) {
     const cIn = new THREE.Color("#ff69b4");
     const cOut = new THREE.Color("#4b0082");
     for (let i = 0; i < gCount; i++) {
-      const i3 = i * 3, r = Math.random() * 20;
-      const branch = ((i % 3) / 3) * Math.PI * 2, spin = r;
+      const i3 = i * 3;
+      const r = Math.random() * galaxyRadius * 0.8 + galaxyRadius * 0.2;
+      const branch = ((i % 3) / 3) * Math.PI * 2;
+      const spin = r * 0.8;
       const rx = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.2 * r;
-      const ry = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.2 * r;
+      const ry = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.25 * r;
       const rz = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.2 * r;
       gPos[i3] = Math.cos(branch + spin) * r + rx;
       gPos[i3+1] = ry;
       gPos[i3+2] = Math.sin(branch + spin) * r + rz;
-      const mc = cIn.clone().lerp(cOut, r / 20);
+      const mc = cIn.clone().lerp(cOut, (r / galaxyRadius) * 0.9);
       gCol[i3] = mc.r; gCol[i3+1] = mc.g; gCol[i3+2] = mc.b;
     }
     gGeo.setAttribute("position", new THREE.BufferAttribute(gPos, 3));
@@ -240,8 +246,8 @@ export default function Galaxy3D({ photos, onSelectPhoto }: Galaxy3DProps) {
     GALAXY_PHRASES.forEach((phrase, i) => {
       const sp = makeTextSprite(phrase, i % 2 === 0 ? "#ff69b4" : "#c084fc");
       const angle = (i / GALAXY_PHRASES.length) * Math.PI * 2 + Math.random() * 1.5;
-      const radius = 5 + Math.random() * 17;
-      const h = (Math.random() - 0.5) * 14;
+      const radius = galaxyRadius * 0.25 + Math.random() * galaxyRadius * 0.35;
+      const h = (Math.random() - 0.5) * Math.max(18, galaxyRadius * 0.5);
       sp.position.set(Math.cos(angle) * radius, h, Math.sin(angle) * radius);
       sp.userData = { angle, radius, height: h, speed: (0.05 + Math.random() * 0.15) * (Math.random() < 0.5 ? 1 : -1) };
       scene.add(sp);
@@ -308,8 +314,8 @@ export default function Galaxy3D({ photos, onSelectPhoto }: Galaxy3DProps) {
       bubbleMeshes.push(hitMesh);
 
       const angle = (i / photos.length) * Math.PI * 2;
-      const radius = 11 + Math.random() * 6;
-      const h = (Math.random() - 0.5) * 10;
+      const radius = galaxyRadius * 0.5 + Math.random() * (galaxyRadius * 0.3);
+      const h = (Math.random() - 0.5) * Math.max(12, galaxyRadius * 0.4);
       group.position.set(Math.cos(angle) * radius, h, Math.sin(angle) * radius);
       group.userData = { angle, radius, height: h, speed: 0.2 + Math.random() * 0.3 };
       scene.add(group);
