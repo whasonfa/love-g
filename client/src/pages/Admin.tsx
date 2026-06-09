@@ -151,19 +151,6 @@ export default function Admin() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {!usingSupabase && (
-          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
-            className="mb-6 p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 flex gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
-            <div className="text-sm text-yellow-200/80">
-              <strong className="block text-yellow-300 mb-1">Supabase no configurado</strong>
-              Las fotos se guardan solo en este dispositivo. Para subir desde el celu y que se vean en todos lados,
-              configura las variables <code className="bg-yellow-500/20 px-1 rounded">VITE_SUPABASE_URL</code> y <code className="bg-yellow-500/20 px-1 rounded">VITE_SUPABASE_ANON_KEY</code> en Netlify.
-              <a href="#setup" className="underline ml-1 text-yellow-300">Ver instrucciones ↓</a>
-            </div>
-          </motion.div>
-        )}
-
         <div className="flex gap-1 bg-white/5 p-1 rounded-2xl mb-6 border border-white/10">
           {([
             { id: "upload" as Tab, label: "📸 Subir foto",   icon: Camera   },
