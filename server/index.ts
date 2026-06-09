@@ -31,7 +31,7 @@ async function startServer() {
   app.use(express.json());
 
   // Admin PIN from environment variable
-  const ADMIN_PIN = process.env.ADMIN_PIN || "16-06-26";
+  const ADMIN_PIN = process.env.ADMIN_PIN || "160626";
   const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
   const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
