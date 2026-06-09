@@ -4,6 +4,30 @@ import type { Photo } from "@/lib/types";
 import { PHOTOS_TABLE } from "@/lib/types";
 import { toast } from "sonner";
 
+async function getSharedPhotos(): Promise<Photo[] | null> {
+  try {
+    const res = await fetch("/api/photos");
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveSharedPhoto(photo: Photo): Promise<boolean> {
+  try {
+    const res = await fetch("/api/photos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(photo),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 const LS_KEY = "love_galaxy_photos";
 
 // ─── Fotos por defecto (se usan si Supabase no está configurado) ──
@@ -54,9 +78,14 @@ export function usePhotos(): UsePhotosReturn {
         if (error) throw error;
         setPhotos(data as Photo[]);
       } else {
-        // ── localStorage fallback ──
-        const saved = localStorage.getItem(LS_KEY);
-        setPhotos(saved ? JSON.parse(saved) : getDefaultPhotos());
+        const shared = await getSharedPhotos();
+        if (shared && shared.length > 0) {
+          setPhotos(shared);
+          localStorage.setItem(LS_KEY, JSON.stringify(shared));
+        } else {
+          const saved = localStorage.getItem(LS_KEY);
+          setPhotos(saved ? JSON.parse(saved) : getDefaultPhotos());
+        }
       }
     } catch (err) {
       console.error("[usePhotos] fetchPhotos:", err);
@@ -107,11 +136,17 @@ export function usePhotos(): UsePhotosReturn {
         toast.success("¡Foto agregada a la galaxia! ✨");
       } else {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           const base64 = e.target?.result as string;
           const newPhoto: Photo = { id: Date.now(), url: base64, title, quote };
-          setPhotos(prev => [...prev, newPhoto]);
-          toast.success("Foto guardada localmente ✨ (configura Supabase para subir a la nube)");
+          const saved = await saveSharedPhoto(newPhoto);
+          if (saved) {
+            await fetchPhotos();
+            toast.success("¡Foto sincronizada para todos los dispositivos! ✨");
+          } else {
+            setPhotos(prev => [...prev, newPhoto]);
+            toast.success("Foto guardada localmente ✨ (configura Supabase para subir a la nube)");
+          }
         };
         reader.readAsDataURL(file);
       }
@@ -138,7 +173,12 @@ export function usePhotos(): UsePhotosReturn {
         await fetchPhotos();
       } else {
         const newPhoto: Photo = { id: Date.now(), url, title, quote };
-        setPhotos(prev => [...prev, newPhoto]);
+        const saved = await saveSharedPhoto(newPhoto);
+        if (saved) {
+          await fetchPhotos();
+        } else {
+          setPhotos(prev => [...prev, newPhoto]);
+        }
       }
       toast.success("¡Foto agregada! ✨");
     } catch (err: any) {

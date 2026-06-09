@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
+import { addPhoto, readPhotos, replacePhotos, type StoredPhoto } from "../shared/photoStore";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,6 +103,35 @@ async function startServer() {
   // Example protected endpoint
   app.get("/api/admin/status", validateSession, (_req, res) => {
     res.json({ status: "authenticated" });
+  });
+
+  app.get("/api/photos", (_req, res) => {
+    res.json(readPhotos());
+  });
+
+  app.post("/api/photos", (req, res) => {
+    const photo = req.body as Partial<StoredPhoto>;
+    if (!photo?.url || !photo?.title || !photo?.quote) {
+      return res.status(400).json({ error: "invalid_photo" });
+    }
+
+    const storedPhoto: StoredPhoto = {
+      id: photo.id ?? Date.now(),
+      url: photo.url,
+      title: photo.title,
+      quote: photo.quote,
+      storage_path: photo.storage_path ?? null,
+      created_at: new Date().toISOString(),
+    };
+
+    addPhoto(storedPhoto);
+    return res.status(201).json(storedPhoto);
+  });
+
+  app.put("/api/photos", (req, res) => {
+    const photos = req.body as StoredPhoto[];
+    replacePhotos(photos);
+    return res.json(readPhotos());
   });
 
   // Serve static files from dist/public in production
