@@ -23,6 +23,26 @@ const pinLimiter = rateLimit({
   },
 });
 
+const normalizePin = (value: string) => value.replace(/\D/g, "");
+
+const isPinValid = (candidate: string, adminPin: string) => {
+  const normalizedCandidate = normalizePin(candidate);
+  const normalizedAdminPin = normalizePin(adminPin);
+
+  if (!normalizedCandidate || !normalizedAdminPin) {
+    return false;
+  }
+
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(normalizedCandidate),
+      Buffer.from(normalizedAdminPin)
+    );
+  } catch {
+    return false;
+  }
+};
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -40,15 +60,12 @@ async function startServer() {
     const { pin } = req.body;
 
     // Sanitize input - reject non-string or overly long values
-    if (typeof pin !== "string" || pin.length > 20) {
+    if (typeof pin !== "string" || pin.trim().length === 0 || pin.trim().length > 20) {
       return res.status(400).json({ error: "invalid_format" });
     }
 
     // Validate PIN using constant-time comparison (prevents timing attacks)
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(pin),
-      Buffer.from(ADMIN_PIN)
-    );
+    const isValid = isPinValid(pin, ADMIN_PIN);
 
     if (isValid) {
       // Generate session token
