@@ -183,7 +183,6 @@ export default function Admin() {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handleFilePick}
                     className="sr-only"
                   />
@@ -201,8 +200,8 @@ export default function Admin() {
                       <div className="w-16 h-16 rounded-full bg-pink-500/10 flex items-center justify-center mb-4">
                         <Camera className="w-8 h-8 text-pink-400" />
                       </div>
-                      <p className="text-white font-medium mb-1">Toca para elegir o sacar foto</p>
-                      <p className="text-white/40 text-sm">O arrastrá una imagen aquí · JPG, PNG, WEBP</p>
+                      <p className="text-white font-medium mb-1">Toca para elegir fotos o sacar una</p>
+                      <p className="text-white/40 text-sm">Galería del celular o cámara · JPG, PNG, WEBP</p>
                     </div>
                   )}
                 </div>
