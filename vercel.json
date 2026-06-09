@@ -4,6 +4,10 @@
   "outputDirectory": "dist/public",
   "routes": [
     {
+      "src": "/favicon.ico",
+      "dest": "/favicon.svg"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },

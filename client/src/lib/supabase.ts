@@ -10,10 +10,12 @@ const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL      as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn(
-    "[Supabase] Faltan las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY. " +
-    "La app usará localStorage como fallback hasta que las configures."
-  );
+  if (import.meta.env.DEV) {
+    console.warn(
+      "[Supabase] Faltan las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY. " +
+      "La app usará localStorage como fallback hasta que las configures."
+    );
+  }
 }
 
 export const supabase = createClient(
