@@ -1,68 +1,23 @@
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Link2, Trash2, Upload, X, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, Database, Clock } from "lucide-react";
+import { Camera, Link2, Trash2, Upload, X, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, Database, LogOut } from "lucide-react";
 import { usePhotos } from "@/hooks/usePhotos";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import type { Photo } from "@/lib/types";
-
-// ─── PIN de acceso (cámbialo por el tuyo) ────────────────────────
-const ADMIN_PIN = "16-06-26";
-const MAX_FAILED_ATTEMPTS = 3;
-const LOCKOUT_TIME_MS = 5 * 60 * 1000; // 5 minutos
-// ─────────────────────────────────────────────────────────────────
 
 type Tab = "upload" | "url" | "list";
 
 export default function Admin() {
-  const [pinInput,    setPinInput]    = useState("");
-  const [authed,      setAuthed]      = useState(false);
-  const [pinError,    setPinError]    = useState(false);
-  const [activeTab,   setActiveTab]   = useState<Tab>("upload");
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-  const [remainingTime, setRemainingTime] = useState(0);
+  const { isAuthed, isLoading, error, validatePin, logout } = useAdminAuth();
+  const [pinInput, setPinInput] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("upload");
 
   const { photos, loading, uploading, uploadFile, addByUrl, deletePhoto, resetToDefaults, usingSupabase } = usePhotos();
 
-  useEffect(() => {
-    if (!lockedUntil) return;
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (now >= lockedUntil) {
-        setLockedUntil(null);
-        setFailedAttempts(0);
-        setRemainingTime(0);
-      } else {
-        setRemainingTime(Math.ceil((lockedUntil - now) / 1000));
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [lockedUntil]);
-
-  const handlePin = (e: React.FormEvent) => {
+  const handlePin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (lockedUntil && Date.now() < lockedUntil) {
-      setPinError(true);
-      return;
-    }
-    
-    if (pinInput === ADMIN_PIN) {
-      setAuthed(true);
-      setPinError(false);
-      setFailedAttempts(0);
-      setLockedUntil(null);
-    } else {
-      const newAttempts = failedAttempts + 1;
-      setFailedAttempts(newAttempts);
-      setPinError(true);
-      setPinInput("");
-      
-      if (newAttempts >= MAX_FAILED_ATTEMPTS) {
-        const lockoutTime = Date.now() + LOCKOUT_TIME_MS;
-        setLockedUntil(lockoutTime);
-        setRemainingTime(LOCKOUT_TIME_MS / 1000);
-      }
-    }
+    await validatePin(pinInput);
+    setPinInput("");
   };
 
   const fileInputRef          = useRef<HTMLInputElement>(null);
@@ -120,7 +75,7 @@ export default function Admin() {
     }
   };
 
-  if (!authed) {
+  if (!isAuthed) {
     return (
       <div className="min-h-screen bg-[#030308] flex items-center justify-center px-4">
         <motion.div
@@ -136,33 +91,40 @@ export default function Admin() {
           <form onSubmit={handlePin} className="space-y-4">
             <input
               type="password"
-              inputMode="numeric"
-              pattern="[0-9\-]*"
               placeholder="PIN"
               value={pinInput}
-              onChange={e => { setPinInput(e.target.value); setPinError(false); }}
-              disabled={lockedUntil ? Date.now() < lockedUntil : false}
+              onChange={e => setPinInput(e.target.value)}
+              disabled={isLoading}
               className="w-full text-center text-2xl tracking-[0.5em] bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-pink-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              maxLength={10}
+              maxLength={20}
               autoFocus
             />
             <AnimatePresence>
-              {lockedUntil && Date.now() < lockedUntil ? (
-                <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              {error && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-red-400 text-sm text-center flex items-center justify-center gap-1 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                  <Clock className="w-4 h-4" /> Bloqueado {remainingTime}s
+                  <AlertCircle className="w-4 h-4" />
+                  {error === "rate_limited"
+                    ? "Demasiados intentos. Intenta en 5 min."
+                    : error === "invalid_pin"
+                    ? "PIN incorrecto"
+                    : error === "network_error"
+                    ? "Error de red. Intenta de nuevo."
+                    : "Error de autenticación"}
                 </motion.div>
-              ) : pinError ? (
-                <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-                  className="text-red-400 text-sm text-center flex items-center justify-center gap-1">
-                  <AlertCircle className="w-4 h-4" /> PIN incorrecto ({failedAttempts}/{MAX_FAILED_ATTEMPTS})
-                </motion.div>
-              ) : null}
+              )}
             </AnimatePresence>
             <button type="submit"
-              disabled={lockedUntil ? Date.now() < lockedUntil : false}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-red-500 text-white font-bold hover:from-pink-600 hover:to-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-              Entrar
+              disabled={isLoading || !pinInput}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-red-500 text-white font-bold hover:from-pink-600 hover:to-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Validando...
+                </>
+              ) : (
+                "Entrar"
+              )}
             </button>
           </form>
           <p className="text-center mt-6">
@@ -195,6 +157,10 @@ export default function Admin() {
           <a href="/" className="text-white/40 hover:text-white text-xs border border-white/10 rounded-full px-3 py-1.5 transition-colors">
             Ver galaxia
           </a>
+          <button onClick={logout}
+            className="text-white/40 hover:text-white text-xs border border-white/10 rounded-full px-3 py-1.5 transition-colors flex items-center gap-1">
+            <LogOut className="w-3 h-3" /> Salir
+          </button>
         </div>
       </header>
 
